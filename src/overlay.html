@@ -37,8 +37,16 @@
             color: #FFFFFF;
             text-align: center;
             word-wrap: break-word;
+            transition: opacity 0.15s ease;
+            will-change: contents;
         }
-        .text.dim { color: rgba(255, 255, 255, 0.45); }
+        .text.dim {
+            color: rgba(255, 255, 255, 0.45);
+            opacity: 0.7;
+        }
+        .text:not(.dim) {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -54,20 +62,47 @@
         const transcript = document.getElementById('transcript');
         const scrollWrapper = document.getElementById('scrollWrapper');
 
+        // 使用 requestAnimationFrame 批量更新，避免频繁 DOM 操作
+        let pendingText = null;
+        let pendingDim = null;
+        let rafId = null;
+
+        function scheduleUpdate() {
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                if (pendingText !== null) {
+                    transcript.textContent = pendingText;
+                    pendingText = null;
+                }
+                if (pendingDim !== null) {
+                    if (pendingDim) {
+                        transcript.classList.add('dim');
+                    } else {
+                        transcript.classList.remove('dim');
+                    }
+                    pendingDim = null;
+                    scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+                }
+            });
+        }
+
         listen('overlay-reset', () => {
-            transcript.textContent = '';
-            transcript.classList.add('dim');
+            pendingText = '';
+            pendingDim = true;
+            scheduleUpdate();
         });
 
         listen('overlay-status', (e) => {
-            transcript.textContent = e.payload;
-            transcript.classList.add('dim');
+            pendingText = e.payload;
+            pendingDim = true;
+            scheduleUpdate();
         });
 
         listen('overlay-text', (e) => {
-            transcript.textContent = e.payload;
-            transcript.classList.remove('dim');
-            scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
+            pendingText = e.payload;
+            pendingDim = false;
+            scheduleUpdate();
         });
 
         console.log('[Overlay] Ready');
