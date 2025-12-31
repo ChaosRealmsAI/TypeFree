@@ -1,0 +1,63 @@
+[package]
+name = "typefree"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-autostart = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Audio recording
+cpal = "0.15"
+
+# High-quality resampling
+rubato = "0.15"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "time"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Base64 encoding
+base64 = "0.22"
+
+# Clipboard
+arboard = "3"
+
+# HTTP client for CDP
+reqwest = { version = "0.12", features = ["json"] }
+
+# WebSocket client for ASR
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+http = "1"
+
+# URL parsing
+url = "2"
+
+# UUID generation
+uuid = { version = "1", features = ["v4"] }
+
+# macOS IOKit for Fn key + overlay panel
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+core-graphics = "0.23"
+cocoa = "0.26"
+objc = "0.2"
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2" }
+
+# Windows keyboard hook + input simulation
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "libloaderapi"] }
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+name = "typefree_lib"

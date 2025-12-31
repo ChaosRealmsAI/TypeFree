@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+.playwright-mcp/
+
+# Generated schemas
+gen/

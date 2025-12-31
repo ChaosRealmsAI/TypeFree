@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeFree</title>
+    <style>
+        :root {
+            --accent: #0A84FF;
+            --success: #32D74B;
+            --danger: #FF453A;
+            --warning: #FFD60A;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #FFFFFF;
+            --text-dim: rgba(255, 255, 255, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: #000000;
+            color: var(--text-main);
+            font-family: "SF Pro Display", "PingFang SC", sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100vh;
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(50px);
+            -webkit-backdrop-filter: blur(50px);
+            padding: 24px 24px 16px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .brand h1 {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: #fff;
+        }
+
+        .status-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px 0;
+        }
+
+        .status-hero h2 {
+            font-size: 32px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            letter-spacing: -0.03em;
+        }
+
+        .status-hero p {
+            color: var(--text-dim);
+            font-size: 14px;
+            font-weight: 400;
+            max-width: 85%;
+            line-height: 1.6;
+        }
+
+        .shortcut-hint {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 16px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .key-cap {
+            background: #FFFFFF;
+            color: #000 !important;
+            padding: 5px 12px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+        }
+
+        .shortcut-hint > span:not(.key-cap) { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+
+        .terminal-log {
+            height: 80px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 10px;
+            font-family: "SF Mono", "Menlo", monospace;
+            font-size: 10px;
+            overflow-y: auto;
+            color: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.01);
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        .terminal-log::-webkit-scrollbar { width: 0; }
+        .log-entry { margin-bottom: 4px; display: flex; gap: 6px; line-height: 1.4; }
+        .log-entry.success { color: var(--success); }
+        .log-entry.error { color: var(--danger); }
+
+        .status-offline h2 { color: #fff; }
+        .status-connected h2 { color: var(--success); }
+        .status-checking h2 { color: var(--warning); }
+
+        /* 权限卡片样式 */
+        .permission-section {
+            margin-bottom: 14px;
+        }
+
+        .permission-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .permission-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .permission-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .permission-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .permission-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .permission-icon.granted {
+            background: rgba(50, 215, 75, 0.15);
+        }
+
+        .permission-icon.denied {
+            background: rgba(255, 69, 58, 0.15);
+        }
+
+        .permission-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .permission-status {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .permission-status.granted {
+            color: var(--success);
+            background: rgba(50, 215, 75, 0.1);
+        }
+
+        .permission-status.denied {
+            color: var(--danger);
+            background: rgba(255, 69, 58, 0.1);
+            cursor: pointer;
+        }
+
+        .permission-status.denied:hover {
+            background: rgba(255, 69, 58, 0.2);
+        }
+
+        /* 使用指南按钮 */
+        .guide-btn {
+            width: 100%;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .guide-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .guide-btn .icon {
+            font-size: 16px;
+        }
+
+        /* 弹窗遮罩 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 弹窗内容 */
+        .modal-content {
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            background: rgba(30, 30, 32, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .modal-header h3 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(80vh - 80px);
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .guide-section {
+            margin-bottom: 24px;
+        }
+
+        .guide-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .guide-section h4 {
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .guide-section ul,
+        .guide-section ol {
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .guide-section li {
+            margin-bottom: 8px;
+        }
+
+        .guide-section li:last-child {
+            margin-bottom: 0;
+        }
+
+        .guide-section p {
+            margin: 8px 0;
+        }
+
+        .guide-section .note {
+            color: var(--warning);
+            font-size: 12px;
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: rgba(255, 214, 10, 0.08);
+            border-radius: 8px;
+            border-left: 3px solid var(--warning);
+        }
+
+        .guide-section strong {
+            color: var(--text-main);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="brand"><h1>TypeFree</h1></div>
+        </header>
+
+        <div class="status-hero" id="statusHero">
+            <h2 id="statusTitle">初始化中...</h2>
+            <p id="statusDesc">正在准备语音识别服务</p>
+        </div>
+
+        <div class="shortcut-hint">
+            <span>长按</span>
+            <span class="key-cap" id="keyCap">Fn</span>
+            <span>开始录音，松开自动转写</span>
+        </div>
+
+        <button class="guide-btn" id="guideBtn">
+            <span class="icon">📖</span>
+            <span>使用指南</span>
+        </button>
+
+        <div class="permission-section" id="doubaoSection">
+            <div class="permission-title">豆包状态</div>
+            <div class="permission-cards">
+                <div class="permission-card">
+                    <div class="permission-info">
+                        <div class="permission-icon denied" id="doubaoInstallIcon">📦</div>
+                        <span class="permission-name">豆包桌面端</span>
+                    </div>
+                    <span class="permission-status denied" id="doubaoInstallStatus">检测中</span>
+                </div>
+                <div class="permission-card">
+                    <div class="permission-info">
+                        <div class="permission-icon denied" id="doubaoLoginIcon">👤</div>
+                        <span class="permission-name">登录状态</span>
+                    </div>
+                    <span class="permission-status denied" id="doubaoLoginStatus">检测中</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="permission-section" id="permissionSection">
+            <div class="permission-title">系统权限</div>
+            <div class="permission-cards">
+                <div class="permission-card">
+                    <div class="permission-info">
+                        <div class="permission-icon denied" id="permInputIcon">⌨</div>
+                        <span class="permission-name">输入监控</span>
+                    </div>
+                    <span class="permission-status denied" id="permInputStatus">检测中</span>
+                </div>
+                <div class="permission-card">
+                    <div class="permission-info">
+                        <div class="permission-icon denied" id="permAccessIcon">♿</div>
+                        <span class="permission-name">辅助功能</span>
+                    </div>
+                    <span class="permission-status denied" id="permAccessStatus">检测中</span>
+                </div>
+                <div class="permission-card">
+                    <div class="permission-info">
+                        <div class="permission-icon denied" id="permMicIcon">🎤</div>
+                        <span class="permission-name">麦克风</span>
+                    </div>
+                    <span class="permission-status denied" id="permMicStatus">检测中</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-log" id="logContent"></div>
+    </div>
+
+    <!-- 使用指南弹窗 -->
+    <div class="modal-overlay" id="guideModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>使用指南</h3>
+                <button class="modal-close" id="guideClose">×</button>
+            </div>
+            <div class="modal-body" id="guideBody">
+                <div class="guide-section">
+                    <h4>前置条件</h4>
+                    <ul>
+                        <li>安装 <strong>豆包桌面端</strong>（从官网下载）</li>
+                        <li>在豆包中 <strong>登录账号</strong></li>
+                        <li class="mac-only">授予 TypeFree 所需的 <strong>系统权限</strong></li>
+                    </ul>
+                </div>
+
+                <div class="guide-section">
+                    <h4>工作原理</h4>
+                    <p>TypeFree 启动时会自动执行以下流程：</p>
+                    <ol>
+                        <li>以调试模式启动豆包桌面端</li>
+                        <li>读取豆包的登录凭证和语音识别参数</li>
+                        <li>缓存这些信息后自动关闭豆包</li>
+                    </ol>
+                    <p class="note">整个过程约需 5-10 秒，完成后即可正常使用。</p>
+                </div>
+
+                <div class="guide-section">
+                    <h4>使用方法</h4>
+                    <ol>
+                        <li>确保状态显示为「已就绪」</li>
+                        <li>将光标定位到任意输入框</li>
+                        <li>长按 <strong class="hotkey-name">Fn 键</strong> 开始说话</li>
+                        <li>松开按键，识别结果自动粘贴</li>
+                    </ol>
+                </div>
+
+                <div class="guide-section">
+                    <h4>常见问题</h4>
+                    <p><strong>Q: 一直显示「初始化中」？</strong></p>
+                    <p>A: 请确认豆包桌面端已安装并登录，然后重启 TypeFree。</p>
+                    <p><strong class="mac-only">Q: 按键没反应？</strong></p>
+                    <p class="mac-only">A: 请检查「输入监控」和「辅助功能」权限是否已授权。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const { invoke } = window.__TAURI__.core;
+        const { listen } = window.__TAURI__.event;
+
+        const statusHero = document.getElementById('statusHero');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDesc = document.getElementById('statusDesc');
+        const logContent = document.getElementById('logContent');
+        const keyCap = document.getElementById('keyCap');
+
+        // 权限相关元素
+        const permInputIcon = document.getElementById('permInputIcon');
+        const permInputStatus = document.getElementById('permInputStatus');
+        const permAccessIcon = document.getElementById('permAccessIcon');
+        const permAccessStatus = document.getElementById('permAccessStatus');
+        const permMicIcon = document.getElementById('permMicIcon');
+        const permMicStatus = document.getElementById('permMicStatus');
+
+        // 豆包状态元素
+        const doubaoInstallIcon = document.getElementById('doubaoInstallIcon');
+        const doubaoInstallStatus = document.getElementById('doubaoInstallStatus');
+        const doubaoLoginIcon = document.getElementById('doubaoLoginIcon');
+        const doubaoLoginStatus = document.getElementById('doubaoLoginStatus');
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        keyCap.textContent = isMac ? 'Fn' : '右 Alt';
+
+        // Windows 上隐藏权限卡片和 mac-only 内容
+        if (!isMac) {
+            document.getElementById('permissionSection').style.display = 'none';
+            // 隐藏使用指南中的 mac-only 内容
+            document.querySelectorAll('.mac-only').forEach(el => el.style.display = 'none');
+        }
+
+        // 更新使用指南中的热键名称
+        document.querySelectorAll('.hotkey-name').forEach(el => {
+            el.textContent = isMac ? 'Fn 键' : '右 Alt 键';
+        });
+
+        function log(msg, type = '') {
+            const item = document.createElement('div');
+            item.className = `log-entry ${type}`;
+            item.innerHTML = `<span>></span> <span>${msg}</span>`;
+            logContent.appendChild(item);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // 更新权限显示
+        function updatePermissionUI(granted, iconEl, statusEl, openSettings, permName) {
+            if (granted) {
+                iconEl.className = 'permission-icon granted';
+                statusEl.className = 'permission-status granted';
+                statusEl.textContent = '已授权';
+                statusEl.onclick = null;
+                statusEl.style.cursor = 'default';
+            } else {
+                iconEl.className = 'permission-icon denied';
+                statusEl.className = 'permission-status denied';
+                statusEl.textContent = '点击授权';
+                statusEl.onclick = () => {
+                    openSettings();
+                    log(`请在系统设置中授权「${permName}」，授权后重启 TypeFree 生效`);
+                };
+                statusEl.style.cursor = 'pointer';
+            }
+        }
+
+        // 检测权限状态
+        async function checkPermissions() {
+            try {
+                const status = await invoke('get_permission_status');
+                log(`权限: 输入=${status.input_monitoring ? '✓' : '✗'}, 辅助=${status.accessibility ? '✓' : '✗'}, 麦克风=${status.microphone ? '✓' : '✗'}`);
+
+                updatePermissionUI(
+                    status.input_monitoring,
+                    permInputIcon,
+                    permInputStatus,
+                    () => invoke('open_input_monitoring_settings'),
+                    '输入监控'
+                );
+
+                updatePermissionUI(
+                    status.accessibility,
+                    permAccessIcon,
+                    permAccessStatus,
+                    () => invoke('open_accessibility_settings'),
+                    '辅助功能'
+                );
+
+                updatePermissionUI(
+                    status.microphone,
+                    permMicIcon,
+                    permMicStatus,
+                    () => invoke('open_microphone_settings'),
+                    '麦克风'
+                );
+
+                if (status.input_monitoring && status.accessibility && status.microphone) {
+                    log('所有权限已授权', 'success');
+                }
+            } catch (e) {
+                log(`权限检测失败: ${e}`, 'error');
+            }
+        }
+
+        // 检测豆包状态
+        async function checkDoubaoStatus() {
+            try {
+                const status = await invoke('get_doubao_status');
+                log(`豆包: 安装=${status.installed ? '✓' : '✗'}, 登录=${status.logged_in ? '✓' : '✗'}`);
+
+                // 更新安装状态
+                if (status.installed) {
+                    doubaoInstallIcon.className = 'permission-icon granted';
+                    doubaoInstallStatus.className = 'permission-status granted';
+                    doubaoInstallStatus.textContent = '已安装';
+                    doubaoInstallStatus.onclick = null;
+                    doubaoInstallStatus.style.cursor = 'default';
+                } else {
+                    doubaoInstallIcon.className = 'permission-icon denied';
+                    doubaoInstallStatus.className = 'permission-status denied';
+                    doubaoInstallStatus.textContent = '点击下载';
+                    doubaoInstallStatus.onclick = () => {
+                        window.__TAURI__.shell.open('https://www.doubao.com/download');
+                    };
+                    doubaoInstallStatus.style.cursor = 'pointer';
+                }
+
+                // 更新登录状态
+                if (!status.installed) {
+                    doubaoLoginIcon.className = 'permission-icon denied';
+                    doubaoLoginStatus.className = 'permission-status denied';
+                    doubaoLoginStatus.textContent = '需先安装';
+                    doubaoLoginStatus.onclick = null;
+                    doubaoLoginStatus.style.cursor = 'default';
+                } else if (status.logged_in) {
+                    doubaoLoginIcon.className = 'permission-icon granted';
+                    doubaoLoginStatus.className = 'permission-status granted';
+                    doubaoLoginStatus.textContent = '已登录';
+                    doubaoLoginStatus.onclick = null;
+                    doubaoLoginStatus.style.cursor = 'default';
+                } else {
+                    doubaoLoginIcon.className = 'permission-icon denied';
+                    doubaoLoginStatus.className = 'permission-status denied';
+                    doubaoLoginStatus.textContent = '未登录';
+                    doubaoLoginStatus.onclick = () => {
+                        invoke('launch_doubao_debug').then(() => {
+                            log('已启动豆包，请登录后重新检测');
+                        });
+                    };
+                    doubaoLoginStatus.style.cursor = 'pointer';
+                }
+
+                return status;
+            } catch (e) {
+                log(`豆包状态检测失败: ${e}`, 'error');
+                return null;
+            }
+        }
+
+        let paramsReady = false;
+
+        function updateStatus() {
+            if (paramsReady) {
+                statusHero.className = 'status-hero status-connected';
+                statusTitle.textContent = '已就绪';
+                statusDesc.textContent = '语音输入已就绪，按住快捷键开始说话';
+            } else {
+                statusHero.className = 'status-hero status-checking';
+                statusTitle.textContent = '初始化中...';
+                statusDesc.textContent = '正在准备语音识别服务';
+            }
+        }
+
+        // 监听参数获取状态
+        listen('asr-params-ready', (e) => {
+            paramsReady = e.payload;
+            log(paramsReady ? '服务就绪' : '使用备用参数', paramsReady ? 'success' : '');
+            updateStatus();
+            // 初始化完成后刷新豆包状态（此时登录状态已缓存）
+            checkDoubaoStatus();
+        });
+
+        // 监听 STT 错误
+        listen('stt-error', (e) => {
+            log(`错误: ${e.payload}`, 'error');
+        });
+
+        // 启动
+        log('TypeFree 启动');
+
+        // 检测豆包状态
+        checkDoubaoStatus();
+        // 窗口获得焦点时刷新豆包状态
+        window.addEventListener('focus', () => {
+            checkDoubaoStatus();
+        });
+
+        // macOS 需要检测权限
+        if (isMac) {
+            checkPermissions();
+            // 窗口获得焦点时自动刷新权限状态（从系统设置切回来时）
+            window.addEventListener('focus', () => {
+                checkPermissions();
+            });
+        }
+
+        // 使用指南弹窗
+        const guideModal = document.getElementById('guideModal');
+        const guideBtn = document.getElementById('guideBtn');
+        const guideClose = document.getElementById('guideClose');
+
+        guideBtn.addEventListener('click', () => {
+            guideModal.classList.add('show');
+        });
+
+        guideClose.addEventListener('click', () => {
+            guideModal.classList.remove('show');
+        });
+
+        // 点击遮罩关闭
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) {
+                guideModal.classList.remove('show');
+            }
+        });
+
+        // ESC 键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && guideModal.classList.contains('show')) {
+                guideModal.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
