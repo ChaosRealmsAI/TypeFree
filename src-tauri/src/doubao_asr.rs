@@ -29,17 +29,9 @@ pub async fn run_asr_session(
     on_partial: impl Fn(&str) + Send + 'static,
     on_final: impl Fn(&str) + Send + 'static,
 ) -> Result<(), String> {
-    // 获取 Cookie 和 ASR 信息（自动获取所有参数）
-    let (cookie, asr_info) = match (doubao_cdp::get_cached_cookies(), doubao_cdp::get_cached_asr_request()) {
-        (Some(c), Some(info)) => {
-            log::info!("[DoubaoASR] Using cached cookie and ASR info");
-            (c, info)
-        }
-        _ => {
-            log::info!("[DoubaoASR] No cache, auto fetching from Doubao desktop...");
-            doubao_cdp::fetch_asr_info_auto().await?
-        }
-    };
+    // 每次都实时获取 Cookie 和 ASR 信息（保证最新）
+    log::info!("[DoubaoASR] Fetching fresh Cookie and ASR info from Doubao desktop...");
+    let (cookie, asr_info) = doubao_cdp::fetch_asr_info_auto().await?;
 
     log::info!("[DoubaoASR] Connecting to: {}", asr_info.url);
 
@@ -183,13 +175,20 @@ pub async fn run_asr_session(
                                         return; // 直接返回
                                     }
                                     "" => {
-                                        // 检查是否是 block 错误
+                                        // 检查是否是服务端错误
                                         if let Some(code) = data.get("code").and_then(|c| c.as_i64()) {
                                             if code != 0 {
                                                 let msg = data.get("message").and_then(|m| m.as_str()).unwrap_or("unknown");
                                                 log::error!("[DoubaoASR] Error: code={}, message={}", code, msg);
-                                                // 清除缓存的 Cookie，下次会重新获取
-                                                doubao_cdp::clear_cached_cookies();
+
+                                                // 根据错误码显示不同提示
+                                                let user_msg = match code {
+                                                    671000003 => "请求太频繁，请稍后再试",
+                                                    710022002 => "服务暂时不可用，请稍后再试",
+                                                    _ => "语音识别出错，请重试",
+                                                };
+                                                on_partial(user_msg);
+
                                                 break;
                                             }
                                         }
@@ -255,17 +254,9 @@ pub async fn is_available() -> bool {
 pub async fn test_connection() -> Result<(), String> {
     log::info!("[DoubaoASR] Testing WebSocket connection...");
 
-    // 获取 Cookie 和 ASR 信息（自动获取所有参数）
-    let (cookie, asr_info) = match (doubao_cdp::get_cached_cookies(), doubao_cdp::get_cached_asr_request()) {
-        (Some(c), Some(info)) => {
-            log::info!("[DoubaoASR] Using cached cookie and ASR info");
-            (c, info)
-        }
-        _ => {
-            log::info!("[DoubaoASR] No cache, auto fetching...");
-            doubao_cdp::fetch_asr_info_auto().await?
-        }
-    };
+    // 每次都实时获取 Cookie 和 ASR 信息
+    log::info!("[DoubaoASR] Fetching fresh Cookie and ASR info...");
+    let (cookie, asr_info) = doubao_cdp::fetch_asr_info_auto().await?;
 
     log::info!("[DoubaoASR] Test connecting to: {}", asr_info.url);
 

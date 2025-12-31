@@ -289,39 +289,21 @@ pub fn parse_asr_url_params(url: &str) -> HashMap<String, String> {
 /// 使用缓存的参数模板构建 URL
 ///
 /// template_params: 从真实请求捕获的参数模板
-/// 实时替换: device_id, web_id, web_tab_id, pc_version, chromium_version, tea_uuid, fp
+/// 只替换 web_tab_id（每次请求需要新的），其他参数保持模板原值
 fn build_asr_url_from_template(
     template_params: &HashMap<String, String>,
-    device_id: &str,
-    web_id: &str,
-    pc_version: &str,
-    chromium_version: &str,
 ) -> String {
     let web_tab_id = uuid::Uuid::new_v4().to_string();
 
-    // 构建参数列表，优先使用模板中的值，实时参数覆盖
+    // 构建参数列表，直接使用模板参数，只替换 web_tab_id
     let mut final_params: Vec<(String, String)> = Vec::new();
 
-    // 需要实时替换的参数
-    let realtime_params: HashMap<&str, &str> = [
-        ("device_id", device_id),
-        ("web_id", web_id),
-        ("tea_uuid", device_id),
-        ("pc_version", pc_version),
-        ("chromium_version", chromium_version),
-        ("web_tab_id", &web_tab_id),
-    ].into_iter().collect();
-
-    // fp 参数特殊处理
-    let fp_value = format!("verify_{}", web_id);
-
-    // 遍历模板参数
     for (key, value) in template_params {
-        if key == "fp" {
-            final_params.push((key.clone(), fp_value.clone()));
-        } else if let Some(&realtime_value) = realtime_params.get(key.as_str()) {
-            final_params.push((key.clone(), realtime_value.to_string()));
+        if key == "web_tab_id" {
+            // 每次请求生成新的 web_tab_id
+            final_params.push((key.clone(), web_tab_id.clone()));
         } else {
+            // 其他参数保持模板原值
             final_params.push((key.clone(), value.clone()));
         }
     }
@@ -749,7 +731,7 @@ pub async fn fetch_asr_info_auto() -> Result<(String, AsrRequestInfo), String> {
     let url = match get_cached_url_params() {
         Some(template_params) => {
             log::info!("[DoubaoCDP] Using cached URL params template");
-            build_asr_url_from_template(&template_params, &device_id, &web_id, &pc_version, &chromium_version)
+            build_asr_url_from_template(&template_params)
         }
         None => {
             log::info!("[DoubaoCDP] No cached URL params, trying to capture by click...");
@@ -764,8 +746,8 @@ pub async fn fetch_asr_info_auto() -> Result<(String, AsrRequestInfo), String> {
                     // 缓存参数模板
                     set_cached_url_params(params.clone());
 
-                    // 使用捕获的参数模板构建 URL
-                    build_asr_url_from_template(&params, &device_id, &web_id, &pc_version, &chromium_version)
+                    // 使用捕获的参数模板构建 URL（只替换 web_tab_id）
+                    build_asr_url_from_template(&params)
                 }
                 Err(e) => {
                     log::warn!("[DoubaoCDP] Failed to capture URL by click: {}, using fallback", e);

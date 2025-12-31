@@ -60,12 +60,22 @@ fn hide_overlay(app: &AppHandle) {
 fn on_fn_pressed(app: &AppHandle) {
     log::info!("[TypeFree] === Fn PRESSED ===");
 
-    // 检查 CDP 方案是否可用
-    let available = RUNTIME.block_on(async { doubao_asr::is_available().await });
+    // 检查豆包是否在运行（需要保持运行以获取实时 Cookie）
+    let doubao_running = RUNTIME.block_on(async { doubao_cdp::is_doubao_debug_available().await });
 
-    if !available {
-        log::warn!("[TypeFree] CDP not available (豆包桌面端未以调试模式运行)");
-        let _ = app.emit("stt-error", "请先启动豆包桌面端（调试模式）");
+    if !doubao_running {
+        log::warn!("[TypeFree] Doubao not running in debug mode");
+        show_overlay(app);
+        let app_for_error = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            overlay::update_text(&app_for_error, "请先启动豆包桌面端");
+        });
+        // 2秒后隐藏
+        let app_for_hide = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(2));
+            hide_overlay(&app_for_hide);
+        });
         return;
     }
 
@@ -100,15 +110,7 @@ fn on_fn_released(app: &AppHandle) {
 
 /// 运行 STT 流程（CDP 方案）
 async fn run_stt(app: &AppHandle, stop_flag: Arc<AtomicBool>) {
-    log::info!("[TypeFree] Starting STT (CDP mode)...");
-
-    // 测试连接
-    if let Err(e) = doubao_asr::test_connection().await {
-        log::error!("[TypeFree] CDP connection failed: {}", e);
-        let _ = app.emit("stt-error", format!("CDP 连接失败: {}", e));
-        hide_overlay(app);
-        return;
-    }
+    log::info!("[TypeFree] Starting STT (realtime Cookie mode)...");
 
     // 启动录音
     let (audio_tx, audio_rx) = std::sync::mpsc::channel::<Vec<u8>>();
@@ -152,12 +154,23 @@ async fn run_stt(app: &AppHandle, stop_flag: Arc<AtomicBool>) {
     };
 
     // 运行 ASR 会话
-    if let Err(e) = doubao_asr::run_asr_session(audio_rx, stop_flag, on_partial, on_final).await {
+    let session_result = doubao_asr::run_asr_session(audio_rx, stop_flag, on_partial, on_final).await;
+
+    if let Err(e) = &session_result {
         log::error!("[TypeFree] ASR session error: {}", e);
+        // 显示错误信息
+        overlay::update_text(app, &format!("错误: {}", e));
     }
 
     let _ = audio_handle.join();
     log::info!("[TypeFree] STT session ended");
+
+    // 如果 ASR 出错，2秒后隐藏 overlay
+    if session_result.is_err() {
+        let app_clone = app.clone();
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        hide_overlay(&app_clone);
+    }
 }
 
 // ============ Tauri Commands ============
@@ -388,40 +401,20 @@ pub fn run() {
                                 log::info!("[TypeFree] Parsed {} params, caching...", params.len());
                                 doubao_cdp::set_cached_url_params(params);
 
-                                // 预获取 Cookie 并缓存
-                                log::info!("[TypeFree] Pre-caching Cookie...");
-                                match doubao_cdp::fetch_asr_info_auto().await {
-                                    Ok(_) => {
-                                        // 在关闭豆包前检测并缓存登录状态
-                                        log::info!("[TypeFree] Checking login status before closing...");
-                                        match doubao_cdp::check_login_status().await {
-                                            Ok(logged_in) => {
-                                                log::info!("[TypeFree] Login status: {}", logged_in);
-                                                doubao_cdp::set_cached_login_status(logged_in);
-                                            }
-                                            Err(e) => {
-                                                log::warn!("[TypeFree] Failed to check login: {}", e);
-                                            }
-                                        }
-
-                                        log::info!("[TypeFree] Cookie cached, closing Doubao...");
-                                        #[cfg(target_os = "macos")]
-                                        {
-                                            let _ = std::process::Command::new("pkill")
-                                                .args(["-f", "Doubao"])
-                                                .spawn();
-                                        }
-                                        #[cfg(target_os = "windows")]
-                                        {
-                                            let _ = std::process::Command::new("taskkill")
-                                                .args(["/IM", "Doubao.exe", "/F"])
-                                                .spawn();
-                                        }
+                                // 检测登录状态
+                                log::info!("[TypeFree] Checking login status...");
+                                match doubao_cdp::check_login_status().await {
+                                    Ok(logged_in) => {
+                                        log::info!("[TypeFree] Login status: {}", logged_in);
+                                        doubao_cdp::set_cached_login_status(logged_in);
                                     }
                                     Err(e) => {
-                                        log::warn!("[TypeFree] Failed to cache Cookie: {}", e);
+                                        log::warn!("[TypeFree] Failed to check login: {}", e);
                                     }
                                 }
+
+                                // 保持豆包在后台运行，不关闭
+                                log::info!("[TypeFree] Doubao will keep running in background for real-time Cookie fetching");
 
                                 let _ = app_for_doubao.emit("asr-params-ready", true);
                             }
